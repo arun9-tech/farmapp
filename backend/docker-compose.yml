@@ -1,0 +1,30 @@
+version: "3.8"
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: farmapp
+      MYSQL_USER: farmapp
+      MYSQL_PASSWORD: farmapp
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+
+  backend:
+    build: .
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/farmapp?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: farmapp
+      SPRING_DATASOURCE_PASSWORD: farmapp
+      JWT_SECRET: change_this_to_a_strong_secret
+    ports:
+      - "8080:8080"
+    restart: on-failure
+
+volumes:
+  db-data:
