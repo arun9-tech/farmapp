@@ -1,6 +1,6 @@
 package com.farmapp.backend.repository;
 
-import com.farmapp.backend.model.Product;
+import com.farmapp.backend.entity.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

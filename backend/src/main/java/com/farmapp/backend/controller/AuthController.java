@@ -1,100 +1,82 @@
 package com.farmapp.backend.controller;
 
-import com.farmapp.backend.dto.AuthResponse;
-import com.farmapp.backend.dto.LoginRequest;
-import com.farmapp.backend.dto.SignupRequest;
-import com.farmapp.backend.model.Farmer;
-import com.farmapp.backend.repository.FarmerRepository;
+import com.farmapp.backend.dto.*;
+import com.farmapp.backend.entity.Customer;
+import com.farmapp.backend.entity.Farmer;
 import com.farmapp.backend.security.JwtUtil;
 import com.farmapp.backend.service.AuthService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import com.farmapp.backend.service.CustomerAuthService;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
-    private final FarmerRepository farmerRepository;
+    private final CustomerAuthService customerAuthService;
     private final JwtUtil jwtUtil;
 
+    // ✅ SINGLE CONSTRUCTOR (THIS IS VERY IMPORTANT)
     public AuthController(AuthService authService,
-                          FarmerRepository farmerRepository,
+                          CustomerAuthService customerAuthService,
                           JwtUtil jwtUtil) {
         this.authService = authService;
-        this.farmerRepository = farmerRepository;
+        this.customerAuthService = customerAuthService;
         this.jwtUtil = jwtUtil;
     }
 
-    // SIGNUP
-    @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody SignupRequest req) {
-        try {
-            Farmer saved = authService.signup(req);
-            saved.setPasswordHash(null);
-            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        }
+    // ========== FARMER ==========
+
+    @PostMapping("/farmer/signup")
+    public String farmerSignup(@RequestBody FarmerSignupRequest req) {
+        authService.signup(req);
+        return "Farmer registered successfully";
     }
 
-    // LOGIN
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest req) {
-        Optional<String> maybeToken = authService.login(req);
-        if (maybeToken.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
-        }
+    @PostMapping("/farmer/login")
+    public Map<String, Object> farmerLogin(@RequestBody FarmerLoginRequest req) {
 
-        String token = maybeToken.get();
-        String subject = jwtUtil.getSubject(token);
-        Long farmerId;
-        try {
-            farmerId = Long.valueOf(subject);
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Invalid token subject");
-        }
+        Farmer farmer = authService.login(req);
 
-        Farmer f = farmerRepository.findById(farmerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Farmer not found"));
+        String token = jwtUtil.generateToken(farmer.getId(), "FARMER");
 
-        AuthResponse resp = new AuthResponse(token, f.getId(), f.getEmail(), f.getName());
-        return ResponseEntity.ok(resp);
+        Map<String, Object> res = new HashMap<>();
+        res.put("id", farmer.getId());
+        res.put("name", farmer.getName());
+        res.put("mobile", farmer.getMobile());
+        res.put("farmName", farmer.getFarmName());
+        res.put("location", farmer.getLocation());
+        res.put("token", token);
+
+        return res;
     }
 
-    // GET CURRENT FARMER (/me)
-    @GetMapping("/me")
-    public ResponseEntity<?> getCurrentFarmer(Principal principal) {
-        if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No authenticated user");
-        }
+    // ========== CUSTOMER ==========
 
-        // Principal.getName() is the farmerId (String) we set in JwtAuthenticationFilter
-        Long farmerId;
-        try {
-            farmerId = Long.parseLong(principal.getName());
-        } catch (NumberFormatException ex) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token subject");
-        }
+    @PostMapping("/customer/signup")
+    public String customerSignup(@RequestBody CustomerSignupRequest req) {
+        customerAuthService.signup(req);
+        return "Customer registered successfully";
+    }
 
-        Farmer farmer = farmerRepository.findById(farmerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Farmer not found"));
+    @PostMapping("/customer/login")
+    public Map<String, Object> customerLogin(@RequestBody CustomerLoginRequest req) {
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("id", farmer.getId());
-        body.put("name", farmer.getName());
-        body.put("email", farmer.getEmail());
-        body.put("phone", farmer.getPhone());
-        body.put("address", farmer.getAddress());
-        body.put("deliveryPreference", farmer.getDeliveryPreference());
+        Customer customer = customerAuthService.login(req);
 
-        return ResponseEntity.ok(body);
+        String token = jwtUtil.generateToken(customer.getId(), "CUSTOMER");
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("id", customer.getId());
+        res.put("name", customer.getName());
+        res.put("email", customer.getEmail());
+        res.put("mobile", customer.getMobile());
+        res.put("address", customer.getAddress());
+        res.put("token", token);
+
+        return res;
     }
 }

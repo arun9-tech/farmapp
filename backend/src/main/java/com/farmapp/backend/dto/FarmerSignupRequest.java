@@ -1,10 +1,10 @@
 package com.farmapp.backend.dto;
 
-public class FarmerResponse {
+public class FarmerSignupRequest {
 
-    public Long id;
     public String name;
     public String mobile;
+    public String password;
     public String farmName;
     public String location;
 }

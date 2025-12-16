@@ -1,93 +1,86 @@
 package com.farmapp.backend.controller;
 
-import com.farmapp.backend.dto.ProductDto;
-import com.farmapp.backend.service.ProductService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import com.farmapp.backend.dto.ProductRequest;
+import com.farmapp.backend.dto.ProductResponse;
+import com.farmapp.backend.entity.Farmer;
+import com.farmapp.backend.entity.Product;
+import com.farmapp.backend.repository.FarmerRepository;
+import com.farmapp.backend.repository.ProductRepository;
 import org.springframework.web.bind.annotation.*;
-import java.security.Principal;
+
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/api/farmer/products")
 public class ProductController {
 
-    private final ProductService productService;
+    private final ProductRepository productRepository;
+    private final FarmerRepository farmerRepository;
 
-    public ProductController(ProductService productService) {
-        this.productService = productService;
+    public ProductController(ProductRepository productRepository,
+                             FarmerRepository farmerRepository) {
+        this.productRepository = productRepository;
+        this.farmerRepository = farmerRepository;
     }
 
-    // public listing
-    @GetMapping
-    public ResponseEntity<List<ProductDto>> listAll() {
-        return ResponseEntity.ok(productService.listAll());
-    }
-
-    // public get
-    @GetMapping("/{id}")
-    public ResponseEntity<?> get(@PathVariable Long id) {
-        ProductDto dto = productService.getById(id);
-        if (dto == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(dto);
-    }
-
-    // create - authenticated
+    // ✅ ADD PRODUCT (Farmer)
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody ProductDto dto, Principal principal) {
-        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
-        Long farmerId = parsePrincipalAsId(principal);
-        if (farmerId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token subject");
-        ProductDto created = productService.createProduct(farmerId, dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public ProductResponse addProduct(@RequestBody ProductRequest req) {
+
+        Farmer farmer = farmerRepository.findById(req.farmerId)
+                .orElseThrow(() -> new RuntimeException("Farmer not found"));
+
+        Product product = new Product();
+        product.setFarmer(farmer);
+        product.setName(req.name);
+        product.setCategory(req.category);
+        product.setUnit(req.unit);
+        product.setPricePerUnit(req.pricePerUnit);
+        product.setQuantityAvailable(req.quantityAvailable);
+        product.setImageUrl(req.imageUrl);
+
+        Product saved = productRepository.save(product);
+
+        return mapToResponse(saved);
     }
 
-    // my products - authenticated
-    @GetMapping("/my")
-    public ResponseEntity<?> myProducts(Principal principal) {
-        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
-        Long farmerId = parsePrincipalAsId(principal);
-        if (farmerId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token subject");
-        return ResponseEntity.ok(productService.listByFarmer(farmerId));
+    @GetMapping
+    public List<ProductResponse> getAllProducts() {
+        return productRepository.findAll().stream().map(p -> {
+            ProductResponse r = new ProductResponse();
+            r.id = p.getId();
+            r.name = p.getName();
+            r.category = p.getCategory();
+            r.unit = p.getUnit();
+            r.pricePerUnit = p.getPricePerUnit();
+            r.quantityAvailable = p.getQuantityAvailable();
+            r.imageUrl = p.getImageUrl();
+
+            r.farmerId = p.getFarmer().getId();
+            r.farmerName = p.getFarmer().getName();
+            r.farmName = p.getFarmer().getFarmName();
+            r.location = p.getFarmer().getLocation();
+            return r;
+        }).toList();
     }
 
-    // update - only owner
-    @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody ProductDto dto, Principal principal) {
-        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
-        Long farmerId = parsePrincipalAsId(principal);
-        if (farmerId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token subject");
-        try {
-            ProductDto updated = productService.updateProduct(id, farmerId, dto);
-            return ResponseEntity.ok(updated);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (SecurityException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
-        }
-    }
 
-    // delete - only owner
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id, Principal principal) {
-        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
-        Long farmerId = parsePrincipalAsId(principal);
-        if (farmerId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token subject");
-        try {
-            productService.deleteProduct(id, farmerId);
-            return ResponseEntity.noContent().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (SecurityException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
-        }
-    }
+    // 🔒 PRIVATE MAPPER (VERY IMPORTANT)
+    private ProductResponse mapToResponse(Product p) {
+        ProductResponse r = new ProductResponse();
+        r.id = p.getId();
+        r.name = p.getName();
+        r.category = p.getCategory();
+        r.unit = p.getUnit();
+        r.pricePerUnit = p.getPricePerUnit();
+        r.quantityAvailable = p.getQuantityAvailable();
+        r.imageUrl = p.getImageUrl();
 
-    private Long parsePrincipalAsId(Principal principal) {
-        try {
-            return Long.parseLong(principal.getName());
-        } catch (Exception ex) {
-            return null;
-        }
+        r.farmerId = p.getFarmer().getId();
+        r.farmerName = p.getFarmer().getName();
+        r.farmName = p.getFarmer().getFarmName();
+        r.location = p.getFarmer().getLocation();
+
+        return r;
     }
 }
