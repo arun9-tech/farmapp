@@ -65,6 +65,9 @@ public class OrderService {
 
     // ================= FARMER ORDERS =================
     public List<Order> getOrdersForFarmer(Long farmerId) {
+        // verify farmer exists
+        farmerRepository.findById(farmerId)
+                .orElseThrow(() -> new RuntimeException("Farmer not found"));
         return orderRepository.findByFarmerId(farmerId);
     }
 
