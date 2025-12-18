@@ -23,50 +23,31 @@ public class ProductController {
         this.farmerRepository = farmerRepository;
     }
 
-    // ✅ ADD PRODUCT (Farmer)
     @PostMapping
     public ProductResponse addProduct(@RequestBody ProductRequest req) {
 
         Farmer farmer = farmerRepository.findById(req.farmerId)
                 .orElseThrow(() -> new RuntimeException("Farmer not found"));
 
-        Product product = new Product();
-        product.setFarmer(farmer);
-        product.setName(req.name);
-        product.setCategory(req.category);
-        product.setUnit(req.unit);
-        product.setPricePerUnit(req.pricePerUnit);
-        product.setQuantityAvailable(req.quantityAvailable);
-        product.setImageUrl(req.imageUrl);
+        Product p = new Product();
+        p.setFarmer(farmer);
+        p.setName(req.name);
+        p.setCategory(req.category);
+        p.setUnit(req.unit);
+        p.setPricePerUnit(req.pricePerUnit);
+        p.setQuantityAvailable(req.quantityAvailable);
+        p.setImageUrl(req.imageUrl);
 
-        Product saved = productRepository.save(product);
-
-        return mapToResponse(saved);
+        return map(productRepository.save(p));
     }
 
     @GetMapping
-    public List<ProductResponse> getAllProducts() {
-        return productRepository.findAll().stream().map(p -> {
-            ProductResponse r = new ProductResponse();
-            r.id = p.getId();
-            r.name = p.getName();
-            r.category = p.getCategory();
-            r.unit = p.getUnit();
-            r.pricePerUnit = p.getPricePerUnit();
-            r.quantityAvailable = p.getQuantityAvailable();
-            r.imageUrl = p.getImageUrl();
-
-            r.farmerId = p.getFarmer().getId();
-            r.farmerName = p.getFarmer().getName();
-            r.farmName = p.getFarmer().getFarmName();
-            r.location = p.getFarmer().getLocation();
-            return r;
-        }).toList();
+    public List<ProductResponse> getAll() {
+        return productRepository.findAll().stream()
+                .map(this::map).toList();
     }
 
-
-    // 🔒 PRIVATE MAPPER (VERY IMPORTANT)
-    private ProductResponse mapToResponse(Product p) {
+    private ProductResponse map(Product p) {
         ProductResponse r = new ProductResponse();
         r.id = p.getId();
         r.name = p.getName();
@@ -75,12 +56,11 @@ public class ProductController {
         r.pricePerUnit = p.getPricePerUnit();
         r.quantityAvailable = p.getQuantityAvailable();
         r.imageUrl = p.getImageUrl();
-
         r.farmerId = p.getFarmer().getId();
         r.farmerName = p.getFarmer().getName();
         r.farmName = p.getFarmer().getFarmName();
         r.location = p.getFarmer().getLocation();
-
         return r;
     }
 }
+

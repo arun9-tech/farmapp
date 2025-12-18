@@ -19,25 +19,35 @@ public class CustomerAuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    // ================= SIGNUP =================
     public void signup(CustomerSignupRequest req) {
 
-        if (customerRepository.existsByEmail(req.email)) {
-            throw new RuntimeException("Email already registered");
+        if (req.getPassword() == null || req.getPassword().isBlank()) {
+            throw new RuntimeException("Password is required");
         }
 
-        Customer c = new Customer();
-        c.setName(req.name);
-        c.setEmail(req.email);
-        c.setMobile(req.mobile);
-        c.setAddress(req.address);
-        c.setPasswordHash(passwordEncoder.encode(req.password));
+        if (customerRepository.findByMobile(req.getMobile()).isPresent()) {
+            throw new RuntimeException("Mobile already registered");
+        }
 
-        customerRepository.save(c);
+        Customer customer = new Customer();
+        customer.setName(req.getName());
+        customer.setEmail(req.getEmail());
+        customer.setMobile(req.getMobile());
+        customer.setAddress(req.getAddress());
+
+        // ✅ HASH PASSWORD
+        customer.setPasswordHash(
+                passwordEncoder.encode(req.getPassword())
+        );
+
+        customerRepository.save(customer);
     }
 
+    // ================= LOGIN =================
     public Customer login(CustomerLoginRequest req) {
 
-        Customer customer = customerRepository.findByEmail(req.getEmail())
+        Customer customer = customerRepository.findByMobile(req.getMobile())
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         if (!passwordEncoder.matches(req.getPassword(), customer.getPasswordHash())) {
@@ -46,5 +56,4 @@ public class CustomerAuthService {
 
         return customer;
     }
-
 }

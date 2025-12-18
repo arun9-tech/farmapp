@@ -1,7 +1,7 @@
 package com.farmapp.backend.entity;
 
-import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "farmers")
@@ -12,9 +12,11 @@ public class Farmer {
     private Long id;
 
     private String name;
+
+    @Column(unique = true)
     private String mobile;
 
-    @JsonIgnore   // 🔥 IMPORTANT: hides from API response
+    @JsonIgnore
     private String passwordHash;
 
     private String farmName;

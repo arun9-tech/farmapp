@@ -19,23 +19,29 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ✅ FARMER SIGNUP
     public void signup(FarmerSignupRequest req) {
 
-        if (farmerRepository.existsByMobile(req.mobile)) {
-            throw new RuntimeException("Mobile already registered");
-        }
+    System.out.println("FARMER SIGNUP REQUEST => " + req);
 
-        Farmer farmer = new Farmer();
-        farmer.setName(req.name);
-        farmer.setMobile(req.mobile);
-        farmer.setFarmName(req.farmName);
-        farmer.setLocation(req.location);
-        farmer.setPasswordHash(passwordEncoder.encode(req.password));
-
-        farmerRepository.save(farmer);
+    if (req.getPassword() == null) {
+        throw new RuntimeException("Password is NULL from frontend");
     }
 
+    Farmer farmer = new Farmer();
+    farmer.setName(req.getName());
+    farmer.setMobile(req.getMobile());
+    farmer.setFarmName(req.getFarmName());
+    farmer.setLocation(req.getLocation());
+
+    farmer.setPasswordHash(
+            passwordEncoder.encode(req.getPassword())
+    );
+
+    farmerRepository.save(farmer);
+}
+
+
+    // ============ FARMER LOGIN ============
     public Farmer login(FarmerLoginRequest req) {
 
         Farmer farmer = farmerRepository.findByMobile(req.getMobile())

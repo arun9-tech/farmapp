@@ -2,14 +2,12 @@ package com.farmapp.backend.dto;
 
 public class CustomerLoginRequest {
 
-    private String email;
+    private String mobile;
     private String password;
 
-    public String getEmail() {
-        return email;
-    }
+    public String getMobile() { return mobile; }
+    public String getPassword() { return password; }
 
-    public String getPassword() {
-        return password;
-    }
+    public void setMobile(String mobile) { this.mobile = mobile; }
+    public void setPassword(String password) { this.password = password; }
 }
